@@ -1,5 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const express = require('express');
+const app = express();
 require('dotenv').config();
 
 // Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual bot token
@@ -13,10 +15,10 @@ const welcomeImage = 'https://www.shutterstock.com/image-vector/welcome-calligra
 
 // Event listener for incoming messages
 bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
-  const command = msg.text;
-  const currentTime = new Date().toLocaleTimeString();
-  const text = msg.text.split(' ').slice(1).join(' ');
+    const chatId = msg.chat.id;
+    const command = msg.text;
+    const currentTime = new Date().toLocaleTimeString();
+    const text = msg.text.split(' ').slice(1).join(' ');
 
   // Process the received command
   switch (command) {
@@ -35,7 +37,8 @@ bot.on('message', async (msg) => {
 /time - See the current time
 /remind <time> <message> - Set a reminder
 /translate <language> <text> - Translate text to the specified language
-/convert <amount> <from> <to> - Convert currency`
+/convert <amount> <from> <to> - Convert currency
+/weather - check weather`
       );
       break;
     case '/info':
@@ -87,6 +90,23 @@ bot.on('message', async (msg) => {
           bot.sendMessage(chatId, 'Please provide a conversion request. Usage: /convert <amount> <from> <to>');
           return;
         }
+        case '/weather':
+      if (!text) {
+        bot.sendMessage(chatId, 'Please provide a location. Usage: /weather <location>');
+        return;
+      }
+
+      try {
+        const weatherData = await getWeatherData(text);
+        const { name, main, weather } = weatherData;
+        const temperature = main.temp;
+        const description = weather[0].description;
+        const message = `Weather in ${name}: ${description}, Temperature: ${temperature}°C`;
+        bot.sendMessage(chatId, message);
+      } catch (error) {
+        bot.sendMessage(chatId, 'Failed to fetch weather data. Please try again later.');
+      }
+      break;
     default:
       bot.sendMessage(chatId, 'Unknown command. Type /help for available commands.');
       break;
@@ -98,3 +118,10 @@ bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, 'Bot has been started!');
 });
+
+async function getWeatherData(location) {
+    const apiKey = process.env.WEATHER-API;
+    const apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${apiKey}&units=metric`;
+    const response = await axios.get(apiUrl);
+    return response.data;
+  }
